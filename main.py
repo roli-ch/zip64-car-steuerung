@@ -266,6 +266,5 @@ def on_forever():
         showRichtung()
         set_led_stop(1)
         trigger = 1
-        
-        
+              
 basic.forever(on_forever)
