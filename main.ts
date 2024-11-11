@@ -22,7 +22,7 @@ input.onButtonPressed(Button.A, function on_button_pressed_a() {
         speed = 0
         richtung = 0
         trigger = 1
-        sendData()
+        send_data()
         set_led_fahren(0)
         //  led.unplot(0, 0)
         music.play(music.createSoundExpression(WaveShape.Square, 1600, 1, 255, 0, 1000, SoundExpressionEffect.None, InterpolationCurve.Curve), music.PlaybackMode.UntilDone)
@@ -39,12 +39,22 @@ input.onButtonPressed(Button.B, function on_button_pressed_b() {
     } else {
         //  led.plot(4, 0)
         licht_on = 0
-        sendData()
+        send_data()
         set_led_licht(0)
     }
     
     // led.unplot(4, 0)
     radio.sendValue("licht_on", licht_on)
+    display.clear()
+    display.show()
+})
+GAME_ZIP64.onButtonPress(GAME_ZIP64.ZIP64ButtonPins.Fire2, GAME_ZIP64.ZIP64ButtonEvents.Click, function on_fire2() {
+    
+    serial.writeValue("fire ", 2)
+    trigger = 1
+    speed = 0
+    richtung = 0
+    send_data()
 })
 //  Funktionen
 //  ===================================
@@ -95,11 +105,11 @@ function set_led_licht(on: number) {
 }
 
 //  Daten Senden
-function sendData() {
+function send_data() {
     
     if (trigger == 1) {
-        // serial.write_value("speed", speed)
-        // serial.write_value("richtung", richtung)
+        serial.writeValue("speedx", speed)
+        serial.writeValue("richtungx", richtung)
         radio.sendNumber(1)
         radio.setTransmitSerialNumber(true)
         radio.sendValue("speed", speed)
@@ -110,6 +120,7 @@ function sendData() {
     
 }
 
+// pause(100)
 //  Daten Empfangen
 // led.unplot(4, 0)
 radio.onReceivedValue(function on_received_value(name: string, value: number) {
@@ -129,49 +140,47 @@ radio.onReceivedValue(function on_received_value(name: string, value: number) {
     
 })
 function setSpeed() {
-    let speedDir: number;
     
-    speedRoh = input.rotation(Rotation.Pitch) * -1
-    if (speedRoh > 0) {
-        speedDir = 1
-    } else {
-        speedDir = -1
+    if (GAME_ZIP64.buttonIsPressed(GAME_ZIP64.ZIP64ButtonPins.Up)) {
+        trigger = 1
+        if (speed < 100) {
+            speed += 1
+        }
+        
     }
     
-    // speed = Math.constrain(abs(speedRoh) - s0, 0, 100)
-    // speed = min(100, speed / 2 * 10) * speedDir
-    speed = Math.min(100, Math.abs(speedRoh * speedFaktor)) * speedDir
-    speedAbs = Math.abs(speed)
-    if (Math.abs(speedAbs - speedOld) > hyst) {
+    if (GAME_ZIP64.buttonIsPressed(GAME_ZIP64.ZIP64ButtonPins.Down)) {
         trigger = 1
-        // serial.write_value("speedAbs", speedAbs)
-        // serial.write_value("speedOld", speedOld)
-        speedOld = speedAbs
+        if (speed > -100) {
+            speed -= 1
+        }
+        
     }
     
 }
 
+// pause(10)
 function setRichtung() {
-    let richtungDir: number;
     
-    richtungRoh = input.rotation(Rotation.Roll)
-    if (richtungRoh > 0) {
-        richtungDir = 1
-    } else {
-        richtungDir = -1
+    if (GAME_ZIP64.buttonIsPressed(GAME_ZIP64.ZIP64ButtonPins.Right)) {
+        trigger = 1
+        if (richtung < 100) {
+            richtung += 1
+        }
+        
     }
     
-    // richtung = Math.constrain(abs(richtungRoh) - r0, 0, 100)
-    // richtung = min(100, richtung / 2 * 10) * richtungDir
-    richtung = Math.min(100, Math.abs(richtungRoh * richtungFkt)) * richtungDir
-    richtungAbs = Math.abs(richtung)
-    if (Math.abs(richtungAbs - richtungOld) > hyst) {
+    if (GAME_ZIP64.buttonIsPressed(GAME_ZIP64.ZIP64ButtonPins.Left)) {
         trigger = 1
-        richtungOld = richtungAbs
+        if (richtung > -100) {
+            richtung -= 1
+        }
+        
     }
     
 }
 
+// pause(10)
 function showSpeed() {
     if (speed > 0) {
         if (speed > s2) {
@@ -236,17 +245,12 @@ function showRichtung() {
 
 //  Init
 //  =========================
-let richtungRoh = 0
-let richtungOld = 0
-let richtungAbs = 0
-let richtungFkt = 2
-// richtungDir = 0
 let richtung = 0
 let licht_on = 0
-let speedRoh = 0
-let speedOld = 0
-let speedAbs = 0
-let speedFaktor = 2
+// speedRoh = 0
+// speedOld = 0
+// speedAbs = 0
+// speedFaktor = 2
 let remCtrl = 0
 let speed = 0
 let fahren = 0
@@ -265,12 +269,15 @@ basic.showLeds(`
     `)
 basic.pause(1000)
 basic.clearScreen()
+let display = GAME_ZIP64.createZIP64Display()
+display.clear()
+display.show()
 //  Time Loop 1s
 //  =====================================
 loops.everyInterval(100, function on_every_interval() {
     
     if (trigger == 1) {
-        datalogger.log(datalogger.createCV("speedRoh", speedRoh), datalogger.createCV("speed", speed), datalogger.createCV("speedAbs", speedAbs), datalogger.createCV("speedOld", speedOld), datalogger.createCV("trigger", trigger), datalogger.createCV("richtung", richtung), datalogger.createCV("richtungRoh", richtungRoh))
+        datalogger.log(datalogger.createCV("speed", speed), datalogger.createCV("trigger", trigger), datalogger.createCV("richtung", richtung))
         trigger = 0
     }
     
@@ -285,11 +292,12 @@ basic.forever(function on_forever() {
         showSpeed()
         setRichtung()
         showRichtung()
-        sendData()
+        send_data()
     } else {
         showSpeed()
         showRichtung()
         set_led_stop(1)
+        trigger = 1
     }
     
 })

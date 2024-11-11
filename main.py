@@ -26,7 +26,7 @@ def on_button_pressed_a():
         speed = 0
         richtung = 0
         trigger = 1
-        sendData()
+        send_data()
         set_led_fahren(0)
         # led.unplot(0, 0)
         music.play(music.create_sound_expression(WaveShape.SQUARE,
@@ -50,11 +50,22 @@ def on_button_pressed_b():
         # led.plot(4, 0)
     else:
         licht_on = 0
-        sendData()
+        send_data()
         set_led_licht(0)
         #led.unplot(4, 0)
     radio.send_value("licht_on", licht_on)
+    display.clear()
+    display.show()
 input.on_button_pressed(Button.B, on_button_pressed_b)
+
+def on_fire2():
+    global trigger, speed, richtung
+    serial.write_value("fire ", 2)
+    trigger = 1
+    speed = 0
+    richtung = 0
+    send_data()
+GAME_ZIP64.on_button_press(GAME_ZIP64.ZIP64ButtonPins.FIRE2,GAME_ZIP64.ZIP64ButtonEvents.CLICK,on_fire2)
 
 # Funktionen
 # ===================================
@@ -95,17 +106,18 @@ def set_led_licht(on):
 
 
 # Daten Senden
-def sendData():
+def send_data():
     global trigger, speed, richtung, licht_on
     if trigger == 1:
-        #serial.write_value("speed", speed)
-        #serial.write_value("richtung", richtung)
+        serial.write_value("speedx", speed)
+        serial.write_value("richtungx", richtung)
         radio.send_number(1)
         radio.set_transmit_serial_number(True)
         radio.send_value("speed", speed)
         radio.send_value("richtung", richtung)
         radio.send_value("licht_on", licht_on)
         trigger = 0
+        #pause(100)
         
 # Daten Empfangen
 def on_received_value(name, value):
@@ -123,36 +135,29 @@ def on_received_value(name, value):
 radio.on_received_value(on_received_value)
 
 def setSpeed():
-    global speedRoh, speed, speedAbs, trigger, speedOld, hyst
-    speedRoh = input.rotation(Rotation.PITCH) * -1
-    if speedRoh > 0:
-        speedDir = 1
-    else:
-        speedDir = -1
-    #speed = Math.constrain(abs(speedRoh) - s0, 0, 100)
-    #speed = min(100, speed / 2 * 10) * speedDir
-    speed = min (100, abs(speedRoh * speedFaktor)) * speedDir
-    speedAbs = abs(speed)
-    if abs(speedAbs - speedOld) > hyst:
+    global speed, trigger
+    if GAME_ZIP64.button_is_pressed(GAME_ZIP64.ZIP64ButtonPins.UP):
         trigger = 1
-        #serial.write_value("speedAbs", speedAbs)
-        #serial.write_value("speedOld", speedOld)
-        speedOld = speedAbs
-
+        if speed < 100:
+            speed += 1
+    if GAME_ZIP64.button_is_pressed(GAME_ZIP64.ZIP64ButtonPins.DOWN):
+        trigger = 1
+        
+        if speed >-100:
+            speed -= 1
+    #pause(10)
+    
 def setRichtung():
-    global richtungRoh, richtung, richtungAbs, trigger, richtungOld
-    richtungRoh = input.rotation(Rotation.ROLL)
-    if richtungRoh > 0:
-        richtungDir = 1
-    else:
-        richtungDir = -1
-    #richtung = Math.constrain(abs(richtungRoh) - r0, 0, 100)
-    #richtung = min(100, richtung / 2 * 10) * richtungDir
-    richtung = min (100, abs(richtungRoh * richtungFkt)) * richtungDir
-    richtungAbs = abs(richtung)
-    if abs(richtungAbs - richtungOld) > hyst:
+    global richtung, trigger
+    if GAME_ZIP64.button_is_pressed(GAME_ZIP64.ZIP64ButtonPins.Right):
         trigger = 1
-        richtungOld = richtungAbs
+        if richtung < 100:
+            richtung += 1
+    if GAME_ZIP64.button_is_pressed(GAME_ZIP64.ZIP64ButtonPins.LEFT):
+        trigger = 1
+        if richtung >-100:
+            richtung -= 1
+    #pause(10)
 
 def showSpeed():
     if speed > 0:
@@ -204,17 +209,13 @@ def showRichtung():
 
 # Init
 # =========================
-richtungRoh = 0
-richtungOld = 0
-richtungAbs = 0
-richtungFkt = 2
-#richtungDir = 0
+
 richtung = 0
 licht_on = 0
-speedRoh = 0
-speedOld = 0
-speedAbs = 0
-speedFaktor = 2
+#speedRoh = 0
+#speedOld = 0
+#speedAbs = 0
+#speedFaktor = 2
 remCtrl = 0
 speed = 0
 fahren = 0
@@ -233,6 +234,9 @@ basic.show_leds("""
     """)
 basic.pause(1000)
 basic.clear_screen()
+display = GAME_ZIP64.create_zip64_display()
+display.clear()
+display.show()
 
 # Time Loop 1s
 # =====================================
@@ -240,13 +244,9 @@ basic.clear_screen()
 def on_every_interval():
     global trigger
     if trigger == 1:
-        datalogger.log(datalogger.create_cv("speedRoh", speedRoh),
-            datalogger.create_cv("speed", speed),
-            datalogger.create_cv("speedAbs", speedAbs),
-            datalogger.create_cv("speedOld", speedOld),
+        datalogger.log(datalogger.create_cv("speed", speed),
             datalogger.create_cv("trigger", trigger),
-            datalogger.create_cv("richtung", richtung),
-            datalogger.create_cv("richtungRoh", richtungRoh))
+            datalogger.create_cv("richtung", richtung))
         trigger = 0
 loops.every_interval(100, on_every_interval)
 
@@ -260,10 +260,12 @@ def on_forever():
         showSpeed()
         setRichtung()
         showRichtung()
-        sendData()
+        send_data()
     else:
         showSpeed()
         showRichtung()
         set_led_stop(1)
+        trigger = 1
+        
         
 basic.forever(on_forever)
