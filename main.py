@@ -15,6 +15,7 @@
 # A: on/off, on: LED 4,0
 def on_button_pressed_a():
     global fahren, speed, richtung, trigger
+    serial.write_line("Button A")
     if fahren == 0:
         fahren = 1
         set_led_fahren(1)
@@ -44,6 +45,7 @@ input.on_button_pressed(Button.A, on_button_pressed_a)
 # B: Licht on/off, on: LED xy44
 def on_button_pressed_b():
     global licht_on
+    serial.write_line("Button B")
     if licht_on == 0:
         licht_on = 1
         set_led_licht(1)
@@ -58,14 +60,23 @@ def on_button_pressed_b():
     display.show()
 input.on_button_pressed(Button.B, on_button_pressed_b)
 
+# Anhalten
+def on_click_fire1():
+    global trigger, speed, richtung
+    serial.write_value("fire ", 1)
+    speed = 0
+    radio.send_value("speed", speed)
+    #send_data()
+GAME_ZIP64.on_button_press(GAME_ZIP64.ZIP64ButtonPins.Fire1,GAME_ZIP64.ZIP64ButtonEvents.DOWN,on_click_fire1)
+
+# Richtung gerade aus
 def on_fire2():
     global trigger, speed, richtung
     serial.write_value("fire ", 2)
-    trigger = 1
-    speed = 0
     richtung = 0
-    send_data()
-GAME_ZIP64.on_button_press(GAME_ZIP64.ZIP64ButtonPins.FIRE2,GAME_ZIP64.ZIP64ButtonEvents.CLICK,on_fire2)
+    radio.send_value("richtung", richtung)
+    #send_data()
+GAME_ZIP64.on_button_press(GAME_ZIP64.ZIP64ButtonPins.Fire2,GAME_ZIP64.ZIP64ButtonEvents.DOWN, on_fire2)
 
 # Funktionen
 # ===================================
@@ -109,8 +120,8 @@ def set_led_licht(on):
 def send_data():
     global trigger, speed, richtung, licht_on
     if trigger == 1:
-        serial.write_value("speedx", speed)
-        serial.write_value("richtungx", richtung)
+        serial.write_value("speed", speed)
+        serial.write_value("richtung", richtung)
         radio.send_number(1)
         radio.set_transmit_serial_number(True)
         radio.send_value("speed", speed)
@@ -152,11 +163,11 @@ def setRichtung():
     if GAME_ZIP64.button_is_pressed(GAME_ZIP64.ZIP64ButtonPins.Right):
         trigger = 1
         if richtung < 100:
-            richtung += 1
+            richtung += 2
     if GAME_ZIP64.button_is_pressed(GAME_ZIP64.ZIP64ButtonPins.LEFT):
         trigger = 1
         if richtung >-100:
-            richtung -= 1
+            richtung -= 2
     #pause(10)
 
 def showSpeed():
@@ -209,7 +220,8 @@ def showRichtung():
 
 # Init
 # =========================
-
+radio.set_group(1)
+radio.set_transmit_power(7)
 richtung = 0
 licht_on = 0
 #speedRoh = 0
@@ -265,6 +277,5 @@ def on_forever():
         showSpeed()
         showRichtung()
         set_led_stop(1)
-        trigger = 1
-              
+        trigger = 1  
 basic.forever(on_forever)

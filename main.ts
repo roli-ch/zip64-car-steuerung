@@ -12,6 +12,7 @@
 //  A: on/off, on: LED 4,0
 input.onButtonPressed(Button.A, function on_button_pressed_a() {
     
+    serial.writeLine("Button A")
     if (fahren == 0) {
         fahren = 1
         set_led_fahren(1)
@@ -33,6 +34,7 @@ input.onButtonPressed(Button.A, function on_button_pressed_a() {
 //  B: Licht on/off, on: LED xy44
 input.onButtonPressed(Button.B, function on_button_pressed_b() {
     
+    serial.writeLine("Button B")
     if (licht_on == 0) {
         licht_on = 1
         set_led_licht(1)
@@ -48,13 +50,21 @@ input.onButtonPressed(Button.B, function on_button_pressed_b() {
     display.clear()
     display.show()
 })
-GAME_ZIP64.onButtonPress(GAME_ZIP64.ZIP64ButtonPins.Fire2, GAME_ZIP64.ZIP64ButtonEvents.Click, function on_fire2() {
+//  Anhalten
+// send_data()
+GAME_ZIP64.onButtonPress(GAME_ZIP64.ZIP64ButtonPins.Fire1, GAME_ZIP64.ZIP64ButtonEvents.Down, function on_click_fire1() {
+    
+    serial.writeValue("fire ", 1)
+    speed = 0
+    radio.sendValue("speed", speed)
+})
+//  Richtung gerade aus
+// send_data()
+GAME_ZIP64.onButtonPress(GAME_ZIP64.ZIP64ButtonPins.Fire2, GAME_ZIP64.ZIP64ButtonEvents.Down, function on_fire2() {
     
     serial.writeValue("fire ", 2)
-    trigger = 1
-    speed = 0
     richtung = 0
-    send_data()
+    radio.sendValue("richtung", richtung)
 })
 //  Funktionen
 //  ===================================
@@ -108,8 +118,8 @@ function set_led_licht(on: number) {
 function send_data() {
     
     if (trigger == 1) {
-        serial.writeValue("speedx", speed)
-        serial.writeValue("richtungx", richtung)
+        serial.writeValue("speed", speed)
+        serial.writeValue("richtung", richtung)
         radio.sendNumber(1)
         radio.setTransmitSerialNumber(true)
         radio.sendValue("speed", speed)
@@ -165,7 +175,7 @@ function setRichtung() {
     if (GAME_ZIP64.buttonIsPressed(GAME_ZIP64.ZIP64ButtonPins.Right)) {
         trigger = 1
         if (richtung < 100) {
-            richtung += 1
+            richtung += 2
         }
         
     }
@@ -173,7 +183,7 @@ function setRichtung() {
     if (GAME_ZIP64.buttonIsPressed(GAME_ZIP64.ZIP64ButtonPins.Left)) {
         trigger = 1
         if (richtung > -100) {
-            richtung -= 1
+            richtung -= 2
         }
         
     }
@@ -245,6 +255,8 @@ function showRichtung() {
 
 //  Init
 //  =========================
+radio.setGroup(1)
+radio.setTransmitPower(7)
 let richtung = 0
 let licht_on = 0
 // speedRoh = 0
